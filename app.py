@@ -182,7 +182,7 @@ st.markdown(
 # ==========================================
 # FEATURE 1: GITHUB REPOSITORY INGESTION BAR
 # ==========================================
-with st.expander("🐙 Ingest Code from GitHub (Direct File or Repository Root)", expanded=False):
+with st.expander("🐙 Fetch Code from GitHub (Optional)", expanded=False):
     st.caption("Paste a GitHub file URL (e.g. `https://github.com/user/repo/blob/main/solution.py`) or a Repository URL:")
     gh_col1, gh_col2 = st.columns([4, 1])
     with gh_col1:
@@ -248,11 +248,11 @@ with st.expander("🐙 Ingest Code from GitHub (Direct File or Repository Root)"
 
 
 # ==========================================
-# INPUT SECTION (CODE & ERROR LOG)
+# INPUT SECTION: SIDE-BY-SIDE IDE LAYOUT
 # ==========================================
-col_left, col_right = st.columns([3, 2], gap="medium")
+col1, col2 = st.columns([3, 2])
 
-with col_left:
+with col1:
     st.markdown("#### 💻 Source Code Input")
     
     # Language Selector
@@ -272,7 +272,7 @@ with col_left:
         placeholder="Paste your source code here...",
     )
 
-with col_right:
+with col2:
     st.markdown("#### 🚨 Error Log & Diagnostics")
     st.caption("Optional stack trace, runtime exception, or compiler output:")
     
@@ -284,28 +284,21 @@ with col_right:
         placeholder="e.g. IndexError: list index out of range\n  at line 6...",
     )
 
-# Action Buttons Bar
-btn_col1, btn_col2, btn_col3 = st.columns([2, 1, 1], gap="small")
+# ==========================================
+# CLEAN CENTERED ACTION BUTTONS
+# ==========================================
+b1, b2, b3 = st.columns([1, 2, 1])
 
-with btn_col1:
-    run_clicked = st.button("🚀 Run Self-Healing Debugger & Roast", use_container_width=True)
-
-with btn_col2:
-    if st.button("🧹 Clear Inputs", use_container_width=True):
-        st.session_state.code_input = ""
-        st.session_state.error_log = ""
-        clear_pipeline_results()
-        st.rerun()
-
-with btn_col3:
-    if st.session_state.debug_results:
-        st.download_button(
-            label="📥 Export Report (.md)",
-            data=generate_markdown_report(st.session_state.debug_results),
-            file_name="CodeRage_Debug_Report.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
+with b2:
+    btn_sub1, btn_sub2 = st.columns([3, 1], gap="small")
+    with btn_sub1:
+        run_clicked = st.button("🚀 Run Self-Healing Debugger & Roast", use_container_width=True)
+    with btn_sub2:
+        if st.button("🧹 Clear Inputs", use_container_width=True):
+            st.session_state.code_input = ""
+            st.session_state.error_log = ""
+            clear_pipeline_results()
+            st.rerun()
 
 
 # ==========================================
