@@ -19,6 +19,7 @@ from utils.ui_helpers import (
     generate_markdown_report,
     inject_custom_css,
     render_diff_html,
+    render_hero_header,
     render_premium_card,
     render_roast_card,
 )
@@ -81,7 +82,7 @@ def apply_preset(language: str, preset_name: str):
 
 
 # ==========================================
-# SIDEBAR CONFIGURATION
+# SIDEBAR (CONFIGURATION & INGESTION)
 # ==========================================
 with st.sidebar:
     st.markdown("### ⚙️ System Configuration")
@@ -107,22 +108,28 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    
-    # Preset Selector
-    st.markdown("### 🧪 1-Click Bug Presets")
-    st.caption("Load real-world student bugs across Python, C++, and Java:")
 
-    preset_lang = st.selectbox(
-        "Target Language Preset",
+    # Target Language Selector
+    st.markdown("### 🎯 Target Language")
+    st.radio(
+        "Select Programming Language",
         options=["Python", "C++", "Java"],
-        index=["Python", "C++", "Java"].index(st.session_state.selected_language)
-        if st.session_state.selected_language in ["Python", "C++", "Java"] else 0,
-        key="preset_lang_select",
+        horizontal=True,
+        key="selected_language",
+        on_change=on_language_change,
+        label_visibility="collapsed",
     )
 
+    st.markdown("---")
+    
+    # 1-Click Bug Presets
+    st.markdown("### 🧪 1-Click Bug Presets")
+    st.caption("Load pre-configured buggy student assignments:")
+
+    preset_lang = st.session_state.selected_language
     preset_options = list(SAMPLE_PRESETS.get(preset_lang, {}).keys())
     selected_preset = st.selectbox(
-        "Select Buggy Scenario",
+        f"Select {preset_lang} Scenario",
         options=preset_options,
         key="preset_scenario_select",
     )
@@ -131,6 +138,72 @@ with st.sidebar:
         apply_preset(preset_lang, selected_preset)
         st.toast(f"Loaded preset: {selected_preset} ({preset_lang})", icon="🧪")
         st.rerun()
+
+    st.markdown("---")
+
+    # GitHub Repository Ingestion in Sidebar
+    st.markdown("### 🐙 GitHub Ingestion")
+    with st.expander("Fetch Code from GitHub", expanded=False):
+        st.caption("Paste a GitHub file URL or Repository URL:")
+        github_url_input = st.text_input(
+            "GitHub URL Input",
+            value=st.session_state.github_selected_url,
+            placeholder="https://github.com/user/repo/blob/main/file.py",
+            label_visibility="collapsed",
+            key="gh_sidebar_input",
+        )
+        fetch_btn = st.button("📥 Fetch Code", use_container_width=True, key="gh_fetch_btn")
+
+        if fetch_btn:
+            if not github_url_input.strip():
+                st.error("Please enter a valid GitHub URL.")
+            else:
+                with st.spinner("Fetching data from GitHub API..."):
+                    gh_res = fetch_github_resource(github_url_input.strip())
+                    
+                    if not gh_res.get("success"):
+                        st.error(gh_res.get("error", "Failed to fetch from GitHub."))
+                    else:
+                        if gh_res.get("type") == "file":
+                            st.session_state.code_input = gh_res.get("content", "")
+                            st.session_state.error_log = ""
+                            st.session_state.selected_language = gh_res.get("language", "Python")
+                            st.session_state.github_repo_files = None
+                            st.session_state.debug_results = None
+                            st.toast(f"Loaded `{gh_res.get('filename')}` from GitHub ({gh_res.get('language')})", icon="🐙")
+                            st.rerun()
+                        
+                        elif gh_res.get("type") == "repo_contents":
+                            st.session_state.github_repo_files = gh_res.get("files", [])
+                            st.session_state.github_selected_url = github_url_input.strip()
+                            st.toast(f"Discovered repo files for `{gh_res.get('owner')}/{gh_res.get('repo')}`", icon="📁")
+
+        # If repo contents were loaded, show file picker
+        if st.session_state.github_repo_files:
+            code_files = [f for f in st.session_state.github_repo_files if f.get("is_code") or f.get("type") == "file"]
+            if code_files:
+                file_options = {f"{f['name']} ({f['path']})": f for f in code_files}
+                selected_file_label = st.selectbox("Select File from Repository:", options=list(file_options.keys()), key="gh_repo_file_select")
+                
+                if st.button("📂 Load Selected File", use_container_width=True, key="gh_load_file_btn"):
+                    chosen = file_options[selected_file_label]
+                    with st.spinner(f"Loading {chosen['name']}..."):
+                        if chosen.get("download_url"):
+                            f_res = fetch_github_resource(chosen["download_url"])
+                        else:
+                            f_res = fetch_github_resource(chosen.get("html_url", ""))
+                        
+                        if f_res.get("success"):
+                            st.session_state.code_input = f_res.get("content", "")
+                            st.session_state.error_log = ""
+                            st.session_state.selected_language = f_res.get("language", "Python")
+                            st.session_state.debug_results = None
+                            st.toast(f"Loaded `{chosen['name']}` into the editor!", icon="📂")
+                            st.rerun()
+                        else:
+                            st.error(f_res.get("error", "Failed to load chosen file."))
+            else:
+                st.warning("No code files found in top-level directory.")
 
     st.markdown("---")
     
@@ -153,152 +226,53 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    st.markdown("---")
-    st.caption("Integrated with Free Public Judge0 API & GitHub REST API.")
-
 
 # ==========================================
-# MAIN INTERFACE
+# MAIN WORKSPACE (HERO & CLEAN SPLIT)
 # ==========================================
 
-# Hero Header
-st.markdown(
-    """
-    <div class="hero-container">
-        <h1 class="hero-title">CodeRage</h1>
-        <p class="hero-subtitle">Your bugs aren't ready for this review.</p>
-        <div class="badge-bar">
-            <span class="badge-pill badge-cyan">🔍 Diagnose</span>
-            <span class="badge-pill badge-purple">🔧 Repair</span>
-            <span class="badge-pill badge-emerald">🧪 Verify</span>
-            <span class="badge-pill badge-crimson">🔥 Roast</span>
-            <span class="badge-pill badge-amber">🧠 Learn</span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# Hero Section
+render_hero_header()
 
-# ==========================================
-# FEATURE 1: GITHUB REPOSITORY INGESTION BAR
-# ==========================================
-with st.expander("🐙 Fetch Code from GitHub (Optional)", expanded=False):
-    st.caption("Paste a GitHub file URL (e.g. `https://github.com/user/repo/blob/main/solution.py`) or a Repository URL:")
-    gh_col1, gh_col2 = st.columns([4, 1])
-    with gh_col1:
-        github_url_input = st.text_input(
-            "GitHub URL",
-            value=st.session_state.github_selected_url,
-            placeholder="https://github.com/octocat/Hello-World/blob/master/file.py",
-            label_visibility="collapsed",
-        )
-    with gh_col2:
-        fetch_btn = st.button("📥 Fetch Code", use_container_width=True)
+# Side-by-Side Clean Split IDE
+col_code, col_logs = st.columns([6, 4], gap="medium")
 
-    if fetch_btn:
-        if not github_url_input.strip():
-            st.error("Please enter a valid GitHub URL.")
-        else:
-            with st.spinner("Fetching data from GitHub API..."):
-                gh_res = fetch_github_resource(github_url_input.strip())
-                
-                if not gh_res.get("success"):
-                    st.error(gh_res.get("error", "Failed to fetch from GitHub."))
-                else:
-                    if gh_res.get("type") == "file":
-                        st.session_state.code_input = gh_res.get("content", "")
-                        st.session_state.error_log = ""
-                        st.session_state.selected_language = gh_res.get("language", "Python")
-                        st.session_state.github_repo_files = None
-                        st.session_state.debug_results = None
-                        st.toast(f"Loaded `{gh_res.get('filename')}` from GitHub ({gh_res.get('language')})", icon="🐙")
-                        st.rerun()
-                    
-                    elif gh_res.get("type") == "repo_contents":
-                        st.session_state.github_repo_files = gh_res.get("files", [])
-                        st.session_state.github_selected_url = github_url_input.strip()
-                        st.toast(f"Discovered repo files for `{gh_res.get('owner')}/{gh_res.get('repo')}`", icon="📁")
-
-    # If repo contents were loaded, show file picker
-    if st.session_state.github_repo_files:
-        code_files = [f for f in st.session_state.github_repo_files if f.get("is_code") or f.get("type") == "file"]
-        if code_files:
-            file_options = {f"{f['name']} ({f['path']})": f for f in code_files}
-            selected_file_label = st.selectbox("Select File from Repository:", options=list(file_options.keys()))
-            
-            if st.button("📂 Load Selected File into Editor"):
-                chosen = file_options[selected_file_label]
-                with st.spinner(f"Loading {chosen['name']}..."):
-                    if chosen.get("download_url"):
-                        f_res = fetch_github_resource(chosen["download_url"])
-                    else:
-                        f_res = fetch_github_resource(chosen.get("html_url", ""))
-                    
-                    if f_res.get("success"):
-                        st.session_state.code_input = f_res.get("content", "")
-                        st.session_state.error_log = ""
-                        st.session_state.selected_language = f_res.get("language", "Python")
-                        st.session_state.debug_results = None
-                        st.toast(f"Loaded `{chosen['name']}` into the editor!", icon="📂")
-                        st.rerun()
-                    else:
-                        st.error(f_res.get("error", "Failed to load chosen file."))
-        else:
-            st.warning("No code files found in top-level directory.")
-
-
-# ==========================================
-# INPUT SECTION: SIDE-BY-SIDE IDE LAYOUT
-# ==========================================
-col1, col2 = st.columns([3, 2])
-
-with col1:
+with col_code:
     st.markdown("#### 💻 Source Code Input")
-    
-    # Language Selector
-    st.radio(
-        "Select Programming Language",
-        options=["Python", "C++", "Java"],
-        horizontal=True,
-        key="selected_language",
-        on_change=on_language_change,
-    )
-
     st.text_area(
         "Enter Buggy Assignment Code:",
-        height=280,
+        height=400,
         key="code_input",
-        help="Paste the student source code here or ingest from GitHub above.",
+        help="Paste the student source code here, load from presets, or ingest from GitHub in the sidebar.",
         placeholder="Paste your source code here...",
+        label_visibility="collapsed",
     )
 
-with col2:
+with col_logs:
     st.markdown("#### 🚨 Error Log & Diagnostics")
-    st.caption("Optional stack trace, runtime exception, or compiler output:")
-    
     st.text_area(
         "Compiler / Runtime Error Trace:",
-        height=280,
+        height=400,
         key="error_log",
         help="Paste any stack traces, compiler errors, or test failure logs here.",
-        placeholder="e.g. IndexError: list index out of range\n  at line 6...",
+        placeholder="e.g. IndexError: list index out of range\n  at line 6...\n(Optional: compiler errors will also be detected automatically by Judge0)",
+        label_visibility="collapsed",
     )
 
 # ==========================================
-# CLEAN CENTERED ACTION BUTTONS
+# THE ACTION CENTER
 # ==========================================
-b1, b2, b3 = st.columns([1, 2, 1])
+col_act1, col_act2 = st.columns([5, 1], gap="small")
 
-with b2:
-    btn_sub1, btn_sub2 = st.columns([3, 1], gap="small")
-    with btn_sub1:
-        run_clicked = st.button("🚀 Run Self-Healing Debugger & Roast", use_container_width=True)
-    with btn_sub2:
-        if st.button("🧹 Clear Inputs", use_container_width=True):
-            st.session_state.code_input = ""
-            st.session_state.error_log = ""
-            clear_pipeline_results()
-            st.rerun()
+with col_act1:
+    run_clicked = st.button("🚀 Run Self-Healing Debugger & Roast", use_container_width=True, type="primary")
+
+with col_act2:
+    if st.button("🧹 Clear Inputs", use_container_width=True):
+        st.session_state.code_input = ""
+        st.session_state.error_log = ""
+        clear_pipeline_results()
+        st.rerun()
 
 
 # ==========================================
@@ -572,20 +546,18 @@ if st.session_state.debug_results:
         exp_col1, exp_col2 = st.columns(2)
         with exp_col1:
             st.download_button(
-                label="📄 Download Markdown Report (.md)",
+                label="📥 Download Markdown Report (.md)",
                 data=generate_markdown_report(results),
                 file_name="CodeRage_Debug_Report.md",
                 mime="text/markdown",
                 use_container_width=True,
             )
+
         with exp_col2:
             st.download_button(
-                label="💾 Download Structured JSON (.json)",
+                label="📥 Download Structured JSON Report (.json)",
                 data=generate_json_report(results),
                 file_name="CodeRage_Debug_Report.json",
                 mime="application/json",
                 use_container_width=True,
             )
-
-        with st.expander("👁️ Preview Raw Markdown Report", expanded=False):
-            st.code(generate_markdown_report(results), language="markdown")
