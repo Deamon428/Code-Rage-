@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  coderage:
+    build: .
+    container_name: coderage-app
+    ports:
+      - "8501:8501"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.5-flash}
+    volumes:
+      - .:/app
+    restart: unless-stopped
