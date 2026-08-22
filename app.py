@@ -82,7 +82,7 @@ def apply_preset(language: str, preset_name: str):
 
 
 # ==========================================
-# SIDEBAR (CONFIGURATION & INGESTION)
+# SIDEBAR (CONFIGURATION, PRESETS & GITHUB)
 # ==========================================
 with st.sidebar:
     st.markdown("### ⚙️ System Configuration")
@@ -227,39 +227,25 @@ with st.sidebar:
 
 
 # ==========================================
-# MAIN WORKSPACE (HERO & CLEAN SPLIT)
+# MAIN IDE INTERFACE (TOP: MAIN EDITOR)
 # ==========================================
 
 # Hero Section
 render_hero_header()
 
-# Side-by-Side Clean Split IDE
-col_code, col_logs = st.columns([6, 4], gap="medium")
-
-with col_code:
-    st.markdown("#### 💻 Source Code Input")
-    st.text_area(
-        "Enter Buggy Assignment Code:",
-        height=400,
-        key="code_input",
-        help="Paste the student source code here, load from presets, or ingest from GitHub in the sidebar.",
-        placeholder="Paste your source code here...",
-        label_visibility="collapsed",
-    )
-
-with col_logs:
-    st.markdown("#### 🚨 Error Log & Diagnostics")
-    st.text_area(
-        "Compiler / Runtime Error Trace:",
-        height=400,
-        key="error_log",
-        help="Paste any stack traces, compiler errors, or test failure logs here.",
-        placeholder="e.g. IndexError: list index out of range\n  at line 6...\n(Optional: compiler errors will also be detected automatically by Judge0)",
-        label_visibility="collapsed",
-    )
+# Full-Width Main IDE Source Code Editor
+st.markdown(f"#### 💻 Source Code Editor ({st.session_state.selected_language})")
+st.text_area(
+    "Enter Buggy Assignment Code:",
+    height=400,
+    key="code_input",
+    help="Paste the student source code here, load from presets, or ingest from GitHub in the sidebar.",
+    placeholder=f"// Paste your {st.session_state.selected_language} source code here or load a scenario from the sidebar...",
+    label_visibility="collapsed",
+)
 
 # ==========================================
-# THE ACTION CENTER
+# ACTION BAR (MIDDLE)
 # ==========================================
 col_act1, col_act2 = st.columns([5, 1], gap="small")
 
@@ -325,25 +311,24 @@ if run_clicked:
 
 
 # ==========================================
-# RESULTS DISPLAY DASHBOARD
+# RESULTS DISPLAY / INTEGRATED TERMINAL (BOTTOM)
 # ==========================================
-if st.session_state.debug_results:
-    results = st.session_state.debug_results
-    parser = results.get("parser", {})
-    fixer = results.get("fixer", {})
-    tutor = results.get("tutor", {})
-    judge0 = results.get("judge0", {})
-    telemetry = results.get("telemetry", {})
+results = st.session_state.debug_results or {}
+parser = results.get("parser", {})
+fixer = results.get("fixer", {})
+tutor = results.get("tutor", {})
+judge0 = results.get("judge0", {})
+telemetry = results.get("telemetry", {})
 
+if st.session_state.debug_results:
     st.markdown("---")
-    
     # Executive Summary Card with Judge0 Status Pill
     verified_pill = '<span class="badge-pill badge-emerald">🧪 Judge0: Verified</span>' if judge0.get('verified') else '<span class="badge-pill badge-amber">🧪 Judge0: Tested</span>'
     healed_pill = f'<span class="badge-pill badge-purple">✨ Self-Healed ({judge0.get("total_attempts")} attempts)</span>' if judge0.get("is_healed") else '<span class="badge-pill badge-cyan">⚡ 1st Pass Fix</span>'
 
     st.markdown(
         f"""
-        <div class="glass-card" style="border-left: 4px solid #38bdf8; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div class="glass-card" style="border-left: 4px solid #38bdf8; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px;">
             <div>
                 <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700;">Diagnostic Verdict</div>
                 <div style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">{parser.get('bug_title', 'Core Defect Isolated')}</div>
@@ -360,20 +345,22 @@ if st.session_state.debug_results:
         unsafe_allow_html=True,
     )
 
-    # Result Tabs
-    tab_tutor, tab_fixer, tab_parser, tab_export = st.tabs(
-        [
-            "🔥 1. Savage Roast & Tutor Review",
-            "🛠️ 2. Clean Fixed Code & Judge0 Verification",
-            "🔍 3. Parser Diagnostics & AST",
-            "📥 4. Export Full Report",
-        ]
-    )
+# The Integrated Terminal & Output Tabs
+tab_roast, tab_logs, tab_fixed, tab_ast, tab_export = st.tabs(
+    [
+        "🔥 Savage Roast",
+        "💻 Error Logs",
+        "🧪 Verified Code",
+        "🔍 AST Diagnostics",
+        "📥 Export Report",
+    ]
+)
 
-    # ------------------------------------------
-    # TAB 1: TUTOR AGENT (SAVAGE ROAST & 3-BULLET EXPLANATION)
-    # ------------------------------------------
-    with tab_tutor:
+# ------------------------------------------
+# TAB 1: SAVAGE ROAST & PEDAGOGICAL REVIEW
+# ------------------------------------------
+with tab_roast:
+    if st.session_state.debug_results:
         # FEATURE 3: RUTHLESS CODE ROAST SECTION
         roast_text = tutor.get("code_roast", "")
         if roast_text:
@@ -438,11 +425,40 @@ if st.session_state.debug_results:
                     st.success(f"🎉 **Correct!** {quiz.get('explanation', '')}")
                 else:
                     st.error(f"❌ **Not quite.** {quiz.get('explanation', '')}")
+    else:
+        st.info("💡 Run the Self-Healing Debugger to generate a brutal code roast and root cause analysis.")
 
-    # ------------------------------------------
-    # TAB 2: FIXER AGENT & FEATURE 2: JUDGE0 SELF-HEALING
-    # ------------------------------------------
-    with tab_fixer:
+# ------------------------------------------
+# TAB 2: ERROR LOGS & INTEGRATED TERMINAL
+# ------------------------------------------
+with tab_logs:
+    st.markdown("### 💻 Integrated Error Trace & Terminal Input")
+    st.caption("Paste compiler errors, stack traces, or test outputs here before running (optional):")
+    
+    st.text_area(
+        "Compiler / Runtime Error Trace:",
+        height=220,
+        key="error_log",
+        help="Paste any stack traces, compiler errors, or test failure logs here.",
+        placeholder="e.g. IndexError: list index out of range\n  at line 6...\n(Optional: compiler errors will also be detected automatically by Judge0)",
+        label_visibility="collapsed",
+    )
+
+    if st.session_state.debug_results:
+        if judge0.get("stderr") or judge0.get("compile_output") or judge0.get("stdout"):
+            st.markdown("#### 🧪 Judge0 Execution & Compiler Output")
+            if judge0.get("stdout"):
+                st.write("**Stdout:**")
+                st.code(judge0.get("stdout"))
+            if judge0.get("stderr") or judge0.get("compile_output"):
+                st.write("**Compiler Stderr / Output:**")
+                st.code(judge0.get("stderr") or judge0.get("compile_output"))
+
+# ------------------------------------------
+# TAB 3: VERIFIED CODE & JUDGE0 SELF-HEALING
+# ------------------------------------------
+with tab_fixed:
+    if st.session_state.debug_results:
         st.markdown("### 🛠️ Corrected, Production-Ready Code & Compiler Verification")
         
         # FEATURE 2: Judge0 Self-Healing Visualizer
@@ -508,11 +524,14 @@ if st.session_state.debug_results:
             st.markdown("#### ⚡ Optimizations & Modernization:")
             for opt in fixer.get("optimizations_applied", []):
                 st.markdown(f"- 🚀 {opt}")
+    else:
+        st.info("💡 Run the Self-Healing Debugger to generate Judge0-verified corrected code.")
 
-    # ------------------------------------------
-    # TAB 3: PARSER AGENT (DIAGNOSTICS & AST)
-    # ------------------------------------------
-    with tab_parser:
+# ------------------------------------------
+# TAB 4: PARSER DIAGNOSTICS & AST
+# ------------------------------------------
+with tab_ast:
+    if st.session_state.debug_results:
         st.markdown("### 🔍 Parser Agent Diagnostics & Code Inspection")
         
         p_col1, p_col2 = st.columns(2)
@@ -534,11 +553,14 @@ if st.session_state.debug_results:
                 subtitle="Static Inspection Feedback",
                 border_color="rgba(251, 191, 36, 0.35)",
             )
+    else:
+        st.info("💡 Run the Self-Healing Debugger to inspect AST and error diagnostics.")
 
-    # ------------------------------------------
-    # TAB 4: EXPORT REPORT
-    # ------------------------------------------
-    with tab_export:
+# ------------------------------------------
+# TAB 5: EXPORT FULL REPORT
+# ------------------------------------------
+with tab_export:
+    if st.session_state.debug_results:
         st.markdown("### 📥 Export & Share Debug Report")
         st.caption("Download the complete multi-agent review report as a formatted Markdown or JSON document.")
 
@@ -560,3 +582,5 @@ if st.session_state.debug_results:
                 mime="application/json",
                 use_container_width=True,
             )
+    else:
+        st.info("💡 Run the Self-Healing Debugger to generate and export review reports.")
