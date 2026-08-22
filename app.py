@@ -143,67 +143,66 @@ with st.sidebar:
 
     # GitHub Repository Ingestion in Sidebar
     st.markdown("### 🐙 GitHub Ingestion")
-    with st.expander("Fetch Code from GitHub", expanded=False):
-        st.caption("Paste a GitHub file URL or Repository URL:")
-        github_url_input = st.text_input(
-            "GitHub URL Input",
-            value=st.session_state.github_selected_url,
-            placeholder="https://github.com/user/repo/blob/main/file.py",
-            label_visibility="collapsed",
-            key="gh_sidebar_input",
-        )
-        fetch_btn = st.button("📥 Fetch Code", use_container_width=True, key="gh_fetch_btn")
+    st.caption("Paste a GitHub file URL or Repository URL:")
+    github_url_input = st.text_input(
+        "GitHub URL Input",
+        value=st.session_state.github_selected_url,
+        placeholder="https://github.com/user/repo/blob/main/file.py",
+        label_visibility="collapsed",
+        key="gh_sidebar_input",
+    )
+    fetch_btn = st.button("📥 Fetch Code", use_container_width=True, key="gh_fetch_btn")
 
-        if fetch_btn:
-            if not github_url_input.strip():
-                st.error("Please enter a valid GitHub URL.")
-            else:
-                with st.spinner("Fetching data from GitHub API..."):
-                    gh_res = fetch_github_resource(github_url_input.strip())
-                    
-                    if not gh_res.get("success"):
-                        st.error(gh_res.get("error", "Failed to fetch from GitHub."))
-                    else:
-                        if gh_res.get("type") == "file":
-                            st.session_state.code_input = gh_res.get("content", "")
-                            st.session_state.error_log = ""
-                            st.session_state.selected_language = gh_res.get("language", "Python")
-                            st.session_state.github_repo_files = None
-                            st.session_state.debug_results = None
-                            st.toast(f"Loaded `{gh_res.get('filename')}` from GitHub ({gh_res.get('language')})", icon="🐙")
-                            st.rerun()
-                        
-                        elif gh_res.get("type") == "repo_contents":
-                            st.session_state.github_repo_files = gh_res.get("files", [])
-                            st.session_state.github_selected_url = github_url_input.strip()
-                            st.toast(f"Discovered repo files for `{gh_res.get('owner')}/{gh_res.get('repo')}`", icon="📁")
-
-        # If repo contents were loaded, show file picker
-        if st.session_state.github_repo_files:
-            code_files = [f for f in st.session_state.github_repo_files if f.get("is_code") or f.get("type") == "file"]
-            if code_files:
-                file_options = {f"{f['name']} ({f['path']})": f for f in code_files}
-                selected_file_label = st.selectbox("Select File from Repository:", options=list(file_options.keys()), key="gh_repo_file_select")
+    if fetch_btn:
+        if not github_url_input.strip():
+            st.error("Please enter a valid GitHub URL.")
+        else:
+            with st.spinner("Fetching data from GitHub API..."):
+                gh_res = fetch_github_resource(github_url_input.strip())
                 
-                if st.button("📂 Load Selected File", use_container_width=True, key="gh_load_file_btn"):
-                    chosen = file_options[selected_file_label]
-                    with st.spinner(f"Loading {chosen['name']}..."):
-                        if chosen.get("download_url"):
-                            f_res = fetch_github_resource(chosen["download_url"])
-                        else:
-                            f_res = fetch_github_resource(chosen.get("html_url", ""))
-                        
-                        if f_res.get("success"):
-                            st.session_state.code_input = f_res.get("content", "")
-                            st.session_state.error_log = ""
-                            st.session_state.selected_language = f_res.get("language", "Python")
-                            st.session_state.debug_results = None
-                            st.toast(f"Loaded `{chosen['name']}` into the editor!", icon="📂")
-                            st.rerun()
-                        else:
-                            st.error(f_res.get("error", "Failed to load chosen file."))
-            else:
-                st.warning("No code files found in top-level directory.")
+                if not gh_res.get("success"):
+                    st.error(gh_res.get("error", "Failed to fetch from GitHub."))
+                else:
+                    if gh_res.get("type") == "file":
+                        st.session_state.code_input = gh_res.get("content", "")
+                        st.session_state.error_log = ""
+                        st.session_state.selected_language = gh_res.get("language", "Python")
+                        st.session_state.github_repo_files = None
+                        st.session_state.debug_results = None
+                        st.toast(f"Loaded `{gh_res.get('filename')}` from GitHub ({gh_res.get('language')})", icon="🐙")
+                        st.rerun()
+                    
+                    elif gh_res.get("type") == "repo_contents":
+                        st.session_state.github_repo_files = gh_res.get("files", [])
+                        st.session_state.github_selected_url = github_url_input.strip()
+                        st.toast(f"Discovered repo files for `{gh_res.get('owner')}/{gh_res.get('repo')}`", icon="📁")
+
+    # If repo contents were loaded, show file picker
+    if st.session_state.github_repo_files:
+        code_files = [f for f in st.session_state.github_repo_files if f.get("is_code") or f.get("type") == "file"]
+        if code_files:
+            file_options = {f"{f['name']} ({f['path']})": f for f in code_files}
+            selected_file_label = st.selectbox("Select File from Repository:", options=list(file_options.keys()), key="gh_repo_file_select")
+            
+            if st.button("📂 Load Selected File", use_container_width=True, key="gh_load_file_btn"):
+                chosen = file_options[selected_file_label]
+                with st.spinner(f"Loading {chosen['name']}..."):
+                    if chosen.get("download_url"):
+                        f_res = fetch_github_resource(chosen["download_url"])
+                    else:
+                        f_res = fetch_github_resource(chosen.get("html_url", ""))
+                    
+                    if f_res.get("success"):
+                        st.session_state.code_input = f_res.get("content", "")
+                        st.session_state.error_log = ""
+                        st.session_state.selected_language = f_res.get("language", "Python")
+                        st.session_state.debug_results = None
+                        st.toast(f"Loaded `{chosen['name']}` into the editor!", icon="📂")
+                        st.rerun()
+                    else:
+                        st.error(f_res.get("error", "Failed to load chosen file."))
+        else:
+            st.warning("No code files found in top-level directory.")
 
     st.markdown("---")
     
