@@ -11,16 +11,15 @@ import streamlit as st
 
 def inject_custom_css():
     """Injects Vercel / Linear dark-mode CSS styling with modern typography, micro-interactions, and glowing accents."""
-    st.markdown(
-        """
+    st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-        /* Global Typography & Background (Vercel/Linear Dark Canvas) */
+        /* Global Typography & Background (WCAG AAA High Contrast Canvas) */
         html, body, [class*="css"], .stMarkdown, .stText, p, span, div, label {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
             letter-spacing: -0.015em;
-            color: #ededed;
+            color: #FFFFFF;
         }
         
         .stApp {
@@ -31,6 +30,30 @@ def inject_custom_css():
 
         code, pre, .stCodeBlock, [data-testid="stCode"] {
             font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace !important;
+        }
+
+        /* Keyboard Navigation Explicit Focus Ring */
+        *:focus-visible {
+            outline: 2px solid #3B82F6 !important;
+            outline-offset: 2px !important;
+        }
+
+        /* Screen-Reader Only Utility */
+        .sr-only {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+
+        /* Accessibility Standard Text Size Minimums (16px) */
+        input, textarea, select, button, .stTextInput input, .stTextArea textarea, .stSelectbox select, div.stButton > button {
+            font-size: 16px !important;
         }
 
         /* Hero Header Styling (Linear/Vercel Frosted Banner) */
@@ -47,7 +70,7 @@ def inject_custom_css():
         .hero-title {
             font-size: 2.2rem;
             font-weight: 800;
-            background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+            background: linear-gradient(180deg, #ffffff 0%, #D4D4D8 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin: 0;
@@ -55,7 +78,7 @@ def inject_custom_css():
         }
 
         .hero-subtitle {
-            color: #a1a1aa;
+            color: #D4D4D8;
             font-size: 1.0rem;
             margin-top: 6px;
             margin-bottom: 14px;
@@ -80,7 +103,7 @@ def inject_custom_css():
             border-radius: 9999px;
             background: rgba(24, 24, 27, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #d4d4d8;
+            color: #D4D4D8;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -220,7 +243,7 @@ def inject_custom_css():
             background: rgba(18, 18, 18, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 10px;
-            color: #f4f4f5;
+            color: #FFFFFF;
             font-size: 0.95rem;
             line-height: 1.6;
         }
@@ -277,7 +300,7 @@ def inject_custom_css():
         }
 
         .diff-normal {
-            color: #a1a1aa;
+            color: #D4D4D8;
             display: block;
             padding: 2px 6px;
         }
@@ -286,6 +309,7 @@ def inject_custom_css():
         div.stButton > button:first-child {
             background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
             color: white;
+            font-size: 16px !important;
             font-weight: 600;
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 8px;
@@ -313,14 +337,14 @@ def render_roast_card(roast_content: str):
     escaped_roast = html.escape(roast_content).replace("\n", "<br/>")
     st.markdown(
         f"""
-        <div class="roast-card">
+        <section class="roast-card" role="region" aria-live="polite" aria-label="Savage Code Roast Results" tabindex="0">
             <div class="roast-header">
-                <span style="font-size: 1.3rem;">🔥</span>
+                <span style="font-size: 1.3rem;" aria-hidden="true">🔥</span>
                 <span>Savage Code Roast</span>
                 <span class="badge-pill badge-crimson" style="margin-left: auto; font-size: 0.72rem;">Brutal CS Review</span>
             </div>
             <div class="roast-content">{escaped_roast}</div>
-        </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
@@ -334,20 +358,22 @@ def render_premium_card(
     border_color: str = "rgba(255, 255, 255, 0.08)",
 ):
     """Renders a Vercel/Linear dark-mode premium card with modern hierarchy, clean typography, and subtle border."""
+    escaped_title = html.escape(str(title))
     escaped_content = html.escape(str(content)).replace("\n", "<br/>") if isinstance(content, str) else str(content)
-    sub_html = f'<div style="font-size: 0.82rem; color: #71717a; margin-top: 2px;">{html.escape(subtitle)}</div>' if subtitle else ""
+    sub_html = f'<div style="font-size: 0.82rem; color: #D4D4D8; margin-top: 2px;">{html.escape(subtitle)}</div>' if subtitle else ""
+    icon_html = f'<span style="font-size: 1.25rem;" aria-hidden="true">{icon}</span>' if icon else ""
     st.markdown(
         f"""
-        <div class="premium-card" style="border-color: {border_color};">
+        <article class="premium-card" role="article" aria-label="{escaped_title}" tabindex="0" style="border-color: {border_color};">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <span style="font-size: 1.25rem;">{icon}</span>
+                {icon_html}
                 <div>
-                    <div style="font-size: 0.95rem; font-weight: 700; color: #f4f4f5; letter-spacing: -0.01em;">{html.escape(title)}</div>
+                    <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.01em;">{escaped_title}</div>
                     {sub_html}
                 </div>
             </div>
-            <div style="font-size: 0.92rem; color: #d4d4d8; line-height: 1.6;">{escaped_content}</div>
-        </div>
+            <div style="font-size: 0.92rem; color: #D4D4D8; line-height: 1.6;">{escaped_content}</div>
+        </article>
         """,
         unsafe_allow_html=True,
     )

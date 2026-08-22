@@ -95,6 +95,7 @@ with st.sidebar:
         type="password",
         help="Enter your Google Gemini API Key. If empty, the app runs in built-in offline simulation mode.",
         placeholder="AIzaSy...",
+        label_visibility="visible",
     )
     
     active_api_key = api_key_input.strip() or env_api_key
@@ -145,7 +146,7 @@ with st.sidebar:
     st.markdown("### 🐙 GitHub Ingestion")
     st.caption("Paste a GitHub file URL or Repository URL:")
     github_url_input = st.text_input(
-        "GitHub URL Input",
+        "GitHub File or Repository URL",
         value=st.session_state.github_selected_url,
         placeholder="https://github.com/user/repo/blob/main/file.py",
         label_visibility="collapsed",
