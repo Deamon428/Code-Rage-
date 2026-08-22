@@ -19,6 +19,8 @@ from utils.ui_helpers import (
     generate_markdown_report,
     inject_custom_css,
     render_diff_html,
+    render_premium_card,
+    render_roast_card,
 )
 
 # Set Streamlit Page Configuration
@@ -409,15 +411,7 @@ if st.session_state.debug_results:
         # FEATURE 3: RUTHLESS CODE ROAST SECTION
         roast_text = tutor.get("code_roast", "")
         if roast_text:
-            st.markdown(
-                f"""
-                <div class="roast-card">
-                    <div class="roast-header">🔥 Savage Code Roast</div>
-                    <div class="roast-content">{html.escape(roast_text)}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            render_roast_card(roast_text)
 
         st.markdown("### 🎓 Root Cause Analysis & Pedagogical Review")
         st.caption("Structured 3-bullet breakdown explaining the trigger, runtime mechanics, and golden rules:")
@@ -440,26 +434,21 @@ if st.session_state.debug_results:
         # Core Concept & Pro Tip Card
         col_c1, col_c2 = st.columns([3, 2], gap="medium")
         with col_c1:
-            st.markdown(
-                f"""
-                <div class="glass-card" style="margin-top: 14px;">
-                    <div style="font-size: 0.8rem; font-weight: 700; color: #a855f7; text-transform: uppercase;">💡 Core Computer Science Concept</div>
-                    <div style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin-top: 2px;">{tutor.get('core_concept_title', 'Defensive Programming & Bounds')}</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 6px; line-height: 1.5;">{tutor.get('core_concept_summary', '')}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            render_premium_card(
+                title=tutor.get("core_concept_title", "Defensive Programming & Bounds"),
+                icon="💡",
+                content=tutor.get("core_concept_summary", ""),
+                subtitle="Core Computer Science Concept",
+                border_color="rgba(168, 85, 247, 0.35)",
             )
 
         with col_c2:
-            st.markdown(
-                f"""
-                <div class="glass-card" style="margin-top: 14px; border-left: 3px solid #34d399;">
-                    <div style="font-size: 0.8rem; font-weight: 700; color: #34d399; text-transform: uppercase;">✨ Golden Pro-Tip</div>
-                    <div style="font-size: 0.9rem; color: #e2e8f0; margin-top: 6px; line-height: 1.5;">{tutor.get('pro_tip', 'Always validate inputs at function boundaries.')}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            render_premium_card(
+                title="Golden Pro-Tip",
+                icon="✨",
+                content=tutor.get("pro_tip", "Always validate inputs at function boundaries."),
+                subtitle="Instructor Recommendation",
+                border_color="rgba(52, 211, 153, 0.35)",
             )
 
         # Interactive Quiz / Knowledge Check
@@ -562,31 +551,23 @@ if st.session_state.debug_results:
         
         p_col1, p_col2 = st.columns(2)
         with p_col1:
-            st.markdown(
-                f"""
-                <div class="glass-card">
-                    <div style="font-weight: 700; color: #38bdf8; margin-bottom: 8px;">📍 Affected Lines & Scope</div>
-                    <div style="font-size: 1.1rem; color: #f1f5f9; font-family: monospace;">{parser.get('impacted_lines', 'Primary Execution Path')}</div>
-                    <hr style="border-color: rgba(255,255,255,0.08); margin: 12px 0;">
-                    <div style="font-weight: 700; color: #38bdf8; margin-bottom: 8px;">⚡ Trigger Mechanism</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1;">{parser.get('trigger_mechanism', 'Unhandled condition triggered at runtime.')}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            render_premium_card(
+                title=f"Affected Scope: {parser.get('impacted_lines', 'Primary Execution Path')}",
+                icon="📍",
+                content=parser.get("trigger_mechanism", "Unhandled condition triggered at runtime."),
+                subtitle="Trigger Mechanism & Line Scope",
+                border_color="rgba(56, 189, 248, 0.35)",
             )
 
         with p_col2:
-            st.markdown(
-                f"""
-                <div class="glass-card">
-                    <div style="font-weight: 700; color: #fbbf24; margin-bottom: 8px;">⚠️ Secondary Anti-Patterns Detected</div>
-                    <div style="font-size: 0.9rem; color: #cbd5e1;">
-                """,
-                unsafe_allow_html=True,
+            sec_issues = "\n".join([f"• {s}" for s in parser.get("secondary_issues", [])]) or "No secondary anti-patterns found."
+            render_premium_card(
+                title="Secondary Anti-Patterns Detected",
+                icon="⚠️",
+                content=sec_issues,
+                subtitle="Static Inspection Feedback",
+                border_color="rgba(251, 191, 36, 0.35)",
             )
-            for sec in parser.get("secondary_issues", []):
-                st.markdown(f"- {sec}")
-            st.markdown("</div></div>", unsafe_allow_html=True)
 
     # ------------------------------------------
     # TAB 4: EXPORT REPORT
