@@ -127,6 +127,7 @@ with st.sidebar:
 
     if st.button("📥 Load Preset into Editor", use_container_width=True):
         apply_preset(preset_lang, selected_preset)
+        st.toast(f"Loaded preset: {selected_preset} ({preset_lang})", icon="🧪")
         st.rerun()
 
     st.markdown("---")
@@ -208,13 +209,13 @@ with st.expander("🐙 Ingest Code from GitHub (Direct File or Repository Root)"
                         st.session_state.selected_language = gh_res.get("language", "Python")
                         st.session_state.github_repo_files = None
                         st.session_state.debug_results = None
-                        st.success(f"✅ Successfully loaded `{gh_res.get('filename')}` ({gh_res.get('language')})!")
+                        st.toast(f"Loaded `{gh_res.get('filename')}` from GitHub ({gh_res.get('language')})", icon="🐙")
                         st.rerun()
                     
                     elif gh_res.get("type") == "repo_contents":
                         st.session_state.github_repo_files = gh_res.get("files", [])
                         st.session_state.github_selected_url = github_url_input.strip()
-                        st.info(f"📁 Discovered repository contents for `{gh_res.get('owner')}/{gh_res.get('repo')}`. Select a file below:")
+                        st.toast(f"Discovered repo files for `{gh_res.get('owner')}/{gh_res.get('repo')}`", icon="📁")
 
     # If repo contents were loaded, show file picker
     if st.session_state.github_repo_files:
@@ -236,7 +237,7 @@ with st.expander("🐙 Ingest Code from GitHub (Direct File or Repository Root)"
                         st.session_state.error_log = ""
                         st.session_state.selected_language = f_res.get("language", "Python")
                         st.session_state.debug_results = None
-                        st.success(f"✅ Loaded `{chosen['name']}` into the editor!")
+                        st.toast(f"Loaded `{chosen['name']}` into the editor!", icon="📂")
                         st.rerun()
                     else:
                         st.error(f_res.get("error", "Failed to load chosen file."))
@@ -314,30 +315,31 @@ if run_clicked:
     else:
         # Clear previous pipeline results before starting
         clear_pipeline_results()
-        
-        progress_placeholder = st.empty()
-        progress_bar = st.progress(0)
-
-        def update_progress(stage: str, pct: int, msg: str):
-            progress_bar.progress(pct)
-            progress_placeholder.markdown(
-                f"""
-                <div class="glass-card" style="padding: 12px 18px; margin: 10px 0; border-color: rgba(56, 189, 248, 0.4);">
-                    <div style="font-size: 0.9rem; font-weight: 600; color: #38bdf8;">
-                        ⏳ <b>Stage:</b> {stage} ({pct}%) &bull; <span style="color: #cbd5e1;">{msg}</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
 
         try:
-            orchestrator = MultiAgentOrchestrator(
-                api_key=active_api_key,
-                model_name=model_choice,
-            )
+            with st.status("Initializing CodeRage Multi-Agent Pipeline...", expanded=True) as status:
+                def update_progress(stage: str, pct: int, msg: str):
+                    if "Parser" in stage or pct <= 30:
+                        status.update(label=f"🔍 1. Parsing & Isolating Bug ({pct}%) — {msg}", state="running")
+                        st.write(f"🔍 **Parser Agent:** {msg}")
+                    elif "Fixer" in stage or (pct > 30 and pct <= 50):
+                        status.update(label=f"🔧 2. Fixer Synthesizing Code Patch ({pct}%) — {msg}", state="running")
+                        st.write(f"🔧 **Fixer Agent:** {msg}")
+                    elif "Compiler" in stage or "Judge0" in stage or "Self-Healing" in stage or (pct > 50 and pct <= 75):
+                        status.update(label=f"🧪 3. Judge0 Compilation & Self-Healing ({pct}%) — {msg}", state="running")
+                        st.write(f"🧪 **Judge0 Sandbox:** {msg}")
+                    elif "Tutor" in stage or pct > 75:
+                        status.update(label=f"🔥 4. Tutor Roast & Pedagogical Review ({pct}%) — {msg}", state="running")
+                        st.write(f"🔥 **Tutor Agent:** {msg}")
+                    else:
+                        status.update(label=f"⚡ {stage} ({pct}%) — {msg}", state="running")
+                        st.write(f"⚡ **{stage}:** {msg}")
 
-            with st.spinner("Multi-Agent reasoning & Judge0 compilation in progress..."):
+                orchestrator = MultiAgentOrchestrator(
+                    api_key=active_api_key,
+                    model_name=model_choice,
+                )
+
                 results = orchestrator.run_debug_workflow(
                     code=st.session_state.code_input,
                     language=st.session_state.selected_language,
@@ -345,14 +347,12 @@ if run_clicked:
                     progress_callback=update_progress,
                 )
 
-            progress_bar.empty()
-            progress_placeholder.empty()
+                status.update(label="Review Complete", state="complete", expanded=False)
+
             st.session_state.debug_results = results
             st.toast("🎉 Self-Healing Analysis & Roast Complete!", icon="🚀")
 
         except Exception as e:
-            progress_bar.empty()
-            progress_placeholder.empty()
             st.error(f"🚨 Pipeline Execution Crash: {str(e)}")
 
 

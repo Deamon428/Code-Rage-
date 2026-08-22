@@ -16,12 +16,13 @@ def inject_custom_css():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         /* Global Typography & Background */
-        html, body, [class*="css"] {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        html, body, [class*="css"], .stMarkdown, .stText, p, span, div, label {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+            letter-spacing: -0.01em;
         }
         
-        code, pre, .stCodeBlock {
-            font-family: 'JetBrains Mono', monospace !important;
+        code, pre, .stCodeBlock, [data-testid="stCode"] {
+            font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace !important;
         }
 
         /* Hero Header Styling */
@@ -72,6 +73,11 @@ def inject_custom_css():
             background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(148, 163, 184, 0.2);
             color: #e2e8f0;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .badge-pill:hover {
+            transform: translateY(-1px);
         }
 
         .badge-cyan {
@@ -120,27 +126,44 @@ def inject_custom_css():
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         }
 
-        /* Roast My Code Banner */
+        /* Pulsing Red/Orange Glowing Border Animation for Savage Roast */
+        @keyframes roastPulseGlow {
+            0% {
+                border-color: rgba(239, 68, 68, 0.45);
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.2), inset 0 0 8px rgba(245, 158, 11, 0.05);
+            }
+            50% {
+                border-color: rgba(249, 115, 22, 0.85);
+                box-shadow: 0 0 28px rgba(249, 115, 22, 0.4), 0 0 14px rgba(239, 68, 68, 0.25), inset 0 0 12px rgba(245, 158, 11, 0.1);
+            }
+            100% {
+                border-color: rgba(239, 68, 68, 0.45);
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.2), inset 0 0 8px rgba(245, 158, 11, 0.05);
+            }
+        }
+
+        /* Savage Roast Output Card with Glowing Border */
         .roast-card {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.1) 50%, rgba(15, 23, 42, 0.9) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            border-left: 5px solid #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.14) 0%, rgba(245, 158, 11, 0.1) 50%, rgba(15, 23, 42, 0.94) 100%);
+            border: 2px solid rgba(239, 68, 68, 0.5);
+            border-left: 6px solid #f97316;
             border-radius: 14px;
-            padding: 20px 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 30px rgba(239, 68, 68, 0.15);
+            padding: 22px 26px;
+            margin-bottom: 22px;
+            animation: roastPulseGlow 3s ease-in-out infinite;
+            backdrop-filter: blur(8px);
         }
 
         .roast-header {
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 1.15rem;
+            font-size: 1.18rem;
             font-weight: 800;
             color: #f87171;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .roast-content {
