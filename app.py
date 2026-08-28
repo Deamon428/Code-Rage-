@@ -135,10 +135,10 @@ with st.sidebar:
         key="preset_scenario_select",
     )
 
-    if st.button("📥 Load Preset into Editor", use_container_width=True):
-        apply_preset(preset_lang, selected_preset)
-        st.toast(f"Loaded preset: {selected_preset} ({preset_lang})", icon="🧪")
-        st.rerun()
+   st.button("Load Preset into Editor", 
+    on_click=apply_preset, 
+    args=(preset_lang, selected_preset)
+)
 
     st.markdown("---")
 
