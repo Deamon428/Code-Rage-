@@ -126,17 +126,22 @@ with st.sidebar:
     st.markdown("### ⚙️ System Configuration")
     
     # Gemini API Key configuration
+    secret_api_key = st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else ""
     env_api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    api_key_input = st.text_input(
-        "🔑 Gemini API Key",
-        value=env_api_key,
-        type="password",
-        help="Enter your Google Gemini API Key. If empty, the app runs in built-in offline simulation mode.",
-        placeholder="AIzaSy...",
-        label_visibility="visible",
-    )
-    
-    active_api_key = api_key_input.strip() or env_api_key
+
+    if secret_api_key:
+        active_api_key = str(secret_api_key).strip()
+    elif env_api_key:
+        active_api_key = env_api_key
+    else:
+        active_api_key = st.text_input(
+            "🔑 Gemini API Key",
+            value="",
+            type="password",
+            help="Enter your Google Gemini API Key. If empty, the app runs in built-in offline simulation mode.",
+            placeholder="AIzaSy...",
+            label_visibility="visible",
+        ).strip()
 
     # Model Selection
     model_choice = st.selectbox(
