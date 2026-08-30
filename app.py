@@ -135,9 +135,9 @@ with st.sidebar:
         key="preset_scenario_select",
     )
 
-   st.button("Load Preset into Editor", 
-    on_click=apply_preset, 
-    args=(preset_lang, selected_preset)
+    st.button("Load Preset into Editor", 
+        on_click=apply_preset, 
+        args=(preset_lang, selected_preset)
 )
 
     st.markdown("---")
